@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { auth, onAuthStateChanged, signOut, isLocalMode, toggleLocalMode } from "../lib/firebase";
-import { User } from "firebase/auth";
 import { 
   Menu, 
   X, 
@@ -12,81 +10,34 @@ import {
   FileText,
   Sun, 
   Moon, 
-  LogIn, 
-  UserPlus, 
-  LogOut, 
   Compass, 
   History,
-  Info,
   Wrench,
-  Sparkles,
-  Database,
   CalendarRange
 } from "lucide-react";
 
 interface NavbarProps {
   onNavigate: (section: string) => void;
   activeSection: string;
-  onOpenAuth: (mode: "login" | "signup") => void;
   onResumeComingSoon: () => void;
   theme: "dark" | "light";
   onToggleTheme: () => void;
-  onShowRestrictedModal: (toolName: string) => void;
 }
 
 export default function Navbar({
   onNavigate,
   activeSection,
-  onOpenAuth,
   onResumeComingSoon,
   theme,
-  onToggleTheme,
-  onShowRestrictedModal
+  onToggleTheme
 }: NavbarProps) {
-  const [user, setUser] = useState<User | null>(null);
   const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      if (typeof (window as any).showToast === "function") {
-        (window as any).showToast("Logged out successfully. See you again soon!", "info");
-      }
-      onNavigate("home");
-    } catch (err) {
-      console.error("Sign out fail:", err);
-      if (typeof (window as any).showToast === "function") {
-        (window as any).showToast("Failed to complete sign out. Please try again.", "error");
-      }
-    }
-  };
-
-  const checkAuthAndNavigate = (toolName: string, sectionId: string) => {
+  const navigateFromMenu = (sectionId: string) => {
     setToolsDropdownOpen(false);
     setMobileMenuOpen(false);
-    
-    if (!user) {
-      onShowRestrictedModal(toolName);
-    } else {
-      onNavigate(sectionId);
-    }
-  };
-
-  const handleHistoryClick = () => {
-    setMobileMenuOpen(false);
-    if (!user) {
-      onShowRestrictedModal("History Dashboard");
-    } else {
-      onNavigate("history");
-    }
+    onNavigate(sectionId);
   };
 
   return (
@@ -152,7 +103,7 @@ export default function Navbar({
                       </h4>
                       <div className="space-y-1">
                         <button
-                          onMouseDown={() => checkAuthAndNavigate("GST Calculator", "gst-calc")}
+                          onMouseDown={() => navigateFromMenu("gst-calc")}
                           className="w-full text-left p-2 rounded-lg hover:bg-white/[0.03] flex items-center gap-2 text-slate-300 hover:text-white transition-all group"
                         >
                           <Calculator className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -163,7 +114,7 @@ export default function Navbar({
                         </button>
                         
                         <button
-                          onMouseDown={() => checkAuthAndNavigate("EMI Calculator", "emi-calc")}
+                          onMouseDown={() => navigateFromMenu("emi-calc")}
                           className="w-full text-left p-2 rounded-lg hover:bg-white/[0.03] flex items-center gap-2 text-slate-300 hover:text-white transition-all group"
                         >
                           <Compass className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -174,7 +125,7 @@ export default function Navbar({
                         </button>
 
                         <button
-                          onMouseDown={() => checkAuthAndNavigate("Age Calculator", "age-calc")}
+                          onMouseDown={() => navigateFromMenu("age-calc")}
                           className="w-full text-left p-2 rounded-lg hover:bg-white/[0.03] flex items-center gap-2 text-slate-300 hover:text-white transition-all group"
                         >
                           <CalendarRange className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -194,7 +145,7 @@ export default function Navbar({
                         </h4>
                         <div className="space-y-1">
                           <button
-                            onMouseDown={() => checkAuthAndNavigate("QR Code Generator", "qr-gen")}
+                            onMouseDown={() => navigateFromMenu("qr-gen")}
                             className="w-full text-left p-2 rounded-lg hover:bg-white/[0.03] flex items-center gap-2 text-slate-300 hover:text-white transition-all group"
                           >
                             <QrCode className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -205,7 +156,7 @@ export default function Navbar({
                           </button>
 
                           <button
-                            onMouseDown={() => checkAuthAndNavigate("Password Generator", "pwd-gen")}
+                            onMouseDown={() => navigateFromMenu("pwd-gen")}
                             className="w-full text-left p-2 rounded-lg hover:bg-white/[0.03] flex items-center gap-2 text-slate-300 hover:text-white transition-all group"
                           >
                             <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -239,7 +190,7 @@ export default function Navbar({
             </div>
 
             <button
-              onClick={handleHistoryClick}
+              onClick={() => navigateFromMenu("history")}
               className={`text-sm font-semibold transition-colors outline-none flex items-center gap-1.5 cursor-pointer ${
                 activeSection === "history" ? "text-indigo-400" : "text-slate-300 hover:text-white"
               }`}
@@ -260,20 +211,6 @@ export default function Navbar({
 
           {/* Theme switcher, Auth control center */}
           <div className="hidden md:flex items-center gap-4.5">
-            {/* Database Sync Mode Toggle */}
-            <button
-              onClick={() => toggleLocalMode(!isLocalMode())}
-              className={`px-3 py-2 rounded-xl border flex items-center gap-1.5 text-[11px] font-bold transition-all outline-none cursor-pointer ${
-                isLocalMode() 
-                  ? "border-amber-500/30 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10" 
-                  : "border-indigo-500/30 bg-indigo-500/5 text-indigo-400 hover:bg-indigo-500/10"
-              }`}
-              title={isLocalMode() ? "Running in Offline Local Mode. Click to switch to Firebase Mode." : "Running in Firebase Cloud Mode. Click to switch to Offline Local Mode."}
-            >
-              <Database className="w-3.5 h-3.5 shrink-0" />
-              <span>{isLocalMode() ? "Local Storage" : "Firebase Cloud"}</span>
-            </button>
-
             {/* Theme Toggle Button */}
             <button
               onClick={onToggleTheme}
@@ -281,41 +218,6 @@ export default function Navbar({
             >
               {theme === "dark" ? <Sun className="w-4.5 h-4.5 text-amber-400" /> : <Moon className="w-4.5 h-4.5" />}
             </button>
-
-            {/* Auth Session details or signup gates */}
-            {user ? (
-              <div className="flex items-center gap-3 bg-slate-950 p-1.5 pr-4 rounded-full border border-slate-800">
-                <div className="w-8 h-8 rounded-full bg-indigo-650 flex items-center justify-center text-white text-xs font-bold uppercase ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-950">
-                  {user.displayName ? user.displayName.slice(0, 1) : user.email?.slice(0,1)}
-                </div>
-                <div className="text-left max-w-28 overflow-hidden pr-2">
-                  <p className="text-[11px] font-bold text-white truncate">{user.displayName || "Session User"}</p>
-                  <p className="text-[9px] text-slate-500 truncate leading-none mt-0.5">{user.email}</p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-1 text-slate-450 hover:text-red-400 transition-colors"
-                  title="Logout Session"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => onOpenAuth("login")}
-                  className="px-4.5 py-2 hover:bg-white/[0.05] text-slate-300 hover:text-white text-sm font-bold rounded-xl transition-all border border-slate-800"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => onOpenAuth("signup")}
-                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-indigo-900/40 hover:shadow-indigo-900/60"
-                >
-                  Sign Up
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Mobile menu Toggle */}
@@ -358,21 +260,21 @@ export default function Navbar({
                 <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Calculators</span>
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <button
-                    onClick={() => checkAuthAndNavigate("GST Calculator", "gst-calc")}
+                    onClick={() => navigateFromMenu("gst-calc")}
                     className="p-2 rounded bg-slate-900 border border-slate-850 hover:bg-slate-800 text-xs font-semibold text-left flex items-center gap-2 text-slate-300"
                   >
                     <Calculator className="w-3.5 h-3.5 text-indigo-400" />
                     <span>GST Calc</span>
                   </button>
                   <button
-                    onClick={() => checkAuthAndNavigate("EMI Calculator", "emi-calc")}
+                    onClick={() => navigateFromMenu("emi-calc")}
                     className="p-2 rounded bg-slate-900 border border-slate-850 hover:bg-slate-800 text-xs font-semibold text-left flex items-center gap-2 text-slate-300"
                   >
                     <Compass className="w-3.5 h-3.5 text-indigo-400" />
                     <span>EMI Calc</span>
                   </button>
                   <button
-                    onClick={() => checkAuthAndNavigate("Age Calculator", "age-calc")}
+                    onClick={() => navigateFromMenu("age-calc")}
                     className="p-2 rounded bg-slate-900 border border-slate-850 hover:bg-slate-800 text-xs font-semibold text-left flex items-center gap-2 text-slate-300"
                   >
                     <CalendarRange className="w-3.5 h-3.5 text-indigo-400" />
@@ -385,14 +287,14 @@ export default function Navbar({
                 <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Generators</span>
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <button
-                    onClick={() => checkAuthAndNavigate("QR Code Generator", "qr-gen")}
+                    onClick={() => navigateFromMenu("qr-gen")}
                     className="p-2 rounded bg-slate-900 border border-slate-850 hover:bg-slate-800 text-xs font-semibold text-left flex items-center gap-2 text-slate-300"
                   >
                     <QrCode className="w-3.5 h-3.5 text-indigo-400" />
                     <span>QR Gen</span>
                   </button>
                   <button
-                    onClick={() => checkAuthAndNavigate("Password Generator", "pwd-gen")}
+                    onClick={() => navigateFromMenu("pwd-gen")}
                     className="p-2 rounded bg-slate-900 border border-slate-850 hover:bg-slate-800 text-xs font-semibold text-left flex items-center gap-2 text-slate-300"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
@@ -412,7 +314,7 @@ export default function Navbar({
               </div>
 
               <button
-                onClick={handleHistoryClick}
+                onClick={() => navigateFromMenu("history")}
                 className="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-900 font-semibold text-sm flex items-center gap-1.5"
               >
                 <History className="w-4 h-4 text-slate-450" />
@@ -427,44 +329,6 @@ export default function Navbar({
               </button>
             </div>
 
-            {/* Auth panel */}
-            <div className="border-t border-slate-850 pt-4 flex gap-2">
-              {user ? (
-                <div className="w-full space-y-2">
-                  <div className="flex items-center gap-3 bg-slate-900 p-2.5 rounded-xl border border-slate-850">
-                    <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-mono font-bold">
-                      {user.email?.slice(0,1).toUpperCase()}
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-bold text-white truncate">{user.displayName || "Session Workspace"}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500 text-rose-450 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Terminate Session</span>
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); onOpenAuth("login"); }}
-                    className="flex-1 py-2 rounded-lg text-slate-300 font-bold border border-slate-850 bg-slate-900 text-sm"
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); onOpenAuth("signup"); }}
-                    className="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-bold text-sm"
-                  >
-                    Sign Up
-                  </button>
-                </>
-              )}
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

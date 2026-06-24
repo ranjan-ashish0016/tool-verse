@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { auth } from "./lib/firebase";
-import { onAuthStateChanged, User } from "firebase/auth";
 import { Check, AlertCircle, Sparkles } from "lucide-react";
 
 // Components
@@ -12,7 +10,6 @@ import FeaturedTools from "./components/FeaturedTools";
 import AboutUs from "./components/AboutUs";
 import Footer from "./components/Footer";
 import ResumeBuilderModal from "./components/ResumeBuilderModal";
-import AuthModal from "./components/AuthModal";
 
 // Tools
 import GstCalculator from "./components/GstCalculator";
@@ -29,8 +26,6 @@ interface Toast {
 }
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [authStateLoaded, setAuthStateLoaded] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
@@ -53,12 +48,6 @@ export default function App() {
 
   // Modals visibility toggles
   const [resumeModalOpen, setResumeModalOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalInitialMode, setAuthModalInitialMode] = useState<"login" | "signup">("login");
-  const [restrictedToolTrigger, setRestrictedToolTrigger] = useState<string | null>(null);
-
-  // Pending redirection/navigation state once user completes authentication in raw flow
-  const [pendingToolRedirect, setPendingToolRedirect] = useState<{ sectionId: string; toolName: string } | null>(null);
 
   // Dark / Light Theme engine
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -70,14 +59,6 @@ export default function App() {
       return "dark";
     }
   });
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setAuthStateLoaded(true);
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Sync theme to local storage & HTML document classes
   useEffect(() => {
@@ -100,34 +81,13 @@ export default function App() {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
-  const handleOpenAuthModal = (mode: "login" | "signup", restrictedToolName: string | null = null) => {
-    setRestrictedToolTrigger(restrictedToolName);
-    setAuthModalInitialMode(mode);
-    setAuthModalOpen(true);
-  };
-
-  const checkAccessAndNavigate = (toolName: string, sectionId: string) => {
-    if (!currentUser) {
-      setPendingToolRedirect({ sectionId, toolName });
-      handleOpenAuthModal("login", toolName);
-    } else {
-      setActiveSection(sectionId);
-      try {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } catch (err) {
-        console.warn("window.scrollTo failed in current container sandbox context", err);
-      }
+  const navigateToSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      console.warn("window.scrollTo failed in current container sandbox context", err);
     }
-  };
-
-  const handleAuthSuccess = () => {
-    if (pendingToolRedirect) {
-      setActiveSection(pendingToolRedirect.sectionId);
-      setPendingToolRedirect(null);
-    } else {
-      setActiveSection("history"); // Redirect to history dashboard log on regular successful registration/login
-    }
-    setRestrictedToolTrigger(null);
   };
 
   const handleExploreTools = () => {
@@ -142,11 +102,7 @@ export default function App() {
   };
 
   const handleGetStarted = () => {
-    if (currentUser) {
-      handleExploreTools();
-    } else {
-      handleOpenAuthModal("signup");
-    }
+    handleExploreTools();
   };
 
   return (
@@ -161,15 +117,7 @@ export default function App() {
       <Navbar
         onNavigate={(section) => {
           if (["gst-calc", "emi-calc", "age-calc", "qr-gen", "pwd-gen", "history"].includes(section)) {
-            const toolNamesMap: { [key: string]: string } = {
-              "gst-calc": "GST Calculator",
-              "emi-calc": "EMI Calculator",
-              "age-calc": "Age Calculator",
-              "qr-gen": "QR Code Generator",
-              "pwd-gen": "Password Generator",
-              "history": "Activity History Dashboard"
-            };
-            checkAccessAndNavigate(toolNamesMap[section], section);
+            navigateToSection(section);
           } else {
             setActiveSection(section);
             if (section === "home") {
@@ -193,11 +141,9 @@ export default function App() {
           }
         }}
         activeSection={activeSection}
-        onOpenAuth={(mode) => handleOpenAuthModal(mode)}
         onResumeComingSoon={() => setResumeModalOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        onShowRestrictedModal={(toolName) => handleOpenAuthModal("login", toolName)}
       />
 
       {/* Main Container Core Router */}
@@ -223,14 +169,7 @@ export default function App() {
               {/* Bento Grid Suite Mappings */}
               <FeaturedTools 
                 onNavigateToTool={(toolId) => {
-                  const toolNamesMap: { [key: string]: string } = {
-                    "gst-calc": "GST Calculator",
-                    "emi-calc": "EMI Calculator",
-                    "age-calc": "Age Calculator",
-                    "qr-gen": "QR Code Generator",
-                    "pwd-gen": "Password Generator",
-                  };
-                  checkAccessAndNavigate(toolNamesMap[toolId], toolId);
+                  navigateToSection(toolId);
                 }} 
                 onResumeSoon={() => setResumeModalOpen(true)} 
               />
@@ -249,7 +188,7 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               className="max-w-4xl mx-auto px-4 py-12 md:py-16"
             >
-              <GstCalculator onShowAuthModal={(t) => handleOpenAuthModal("login", t)} />
+              <GstCalculator />
             </motion.div>
           )}
 
@@ -261,7 +200,7 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               className="max-w-4xl mx-auto px-4 py-12 md:py-16"
             >
-              <EmiCalculator onShowAuthModal={(t) => handleOpenAuthModal("login", t)} />
+              <EmiCalculator />
             </motion.div>
           )}
 
@@ -273,7 +212,7 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               className="max-w-4xl mx-auto px-4 py-12 md:py-16"
             >
-              <AgeCalculator onShowAuthModal={(t) => handleOpenAuthModal("login", t)} />
+              <AgeCalculator />
             </motion.div>
           )}
 
@@ -285,7 +224,7 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               className="max-w-5xl mx-auto px-4 py-12 md:py-16"
             >
-              <QrGenerator onShowAuthModal={(t) => handleOpenAuthModal("login", t)} />
+              <QrGenerator />
             </motion.div>
           )}
 
@@ -297,7 +236,7 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               className="max-w-4xl mx-auto px-4 py-12 md:py-16"
             >
-              <PasswordGenerator onShowAuthModal={(t) => handleOpenAuthModal("login", t)} />
+              <PasswordGenerator />
             </motion.div>
           )}
 
@@ -337,14 +276,6 @@ export default function App() {
       <ResumeBuilderModal
         isOpen={resumeModalOpen}
         onClose={() => setResumeModalOpen(false)}
-      />
-
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        initialMode={authModalInitialMode}
-        onSuccess={handleAuthSuccess}
-        restrictedToolName={restrictedToolTrigger}
       />
 
       {/* Floating Toast Notification Stack */}

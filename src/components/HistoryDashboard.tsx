@@ -1,16 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  db, 
-  auth,
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  deleteDoc, 
-  doc, 
-  writeBatch 
-} from "../lib/firebase";
+import { clearHistoryRecords, deleteHistoryRecord, getHistoryRecords } from "../lib/localHistory";
 import { 
   History, 
   Trash2, 
@@ -56,26 +46,13 @@ export default function HistoryDashboard() {
   ];
 
   const fetchHistory = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      setRecords([]);
-      return;
-    }
-
     setLoading(true);
     try {
-      const allPromises = collectionsList.map(async (colName) => {
-        const q = query(collection(db, colName), where("userId", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        
-        return querySnapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
+      const mappedRecords = getHistoryRecords().map((data) => {
+          const colName = data.collectionName;
           
-          // Format Firestore timestamp safely
           let rawDate = new Date();
-          if (data.timestamp?.seconds) {
-            rawDate = new Date(data.timestamp.seconds * 1000);
-          } else if (data.timestamp) {
+          if (data.timestamp) {
             rawDate = new Date(data.timestamp);
           }
 
@@ -101,7 +78,7 @@ export default function HistoryDashboard() {
           }
 
           return {
-            id: docSnap.id,
+            id: data.id,
             collectionName: colName,
             toolName: data.toolName || "Smart Tool",
             timestamp: rawDate,
@@ -109,15 +86,11 @@ export default function HistoryDashboard() {
             resultDescription: resultDesc,
             rawRecord: data
           } as HistoryItem;
-        });
       });
 
-      const results = await Promise.all(allPromises);
-      const flattened = results.flat();
-      
       // Sort newest first
-      flattened.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-      setRecords(flattened);
+      mappedRecords.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      setRecords(mappedRecords);
     } catch (err) {
       console.error("Failed to query history logs:", err);
     } finally {
@@ -131,7 +104,7 @@ export default function HistoryDashboard() {
 
   const handleDeleteSingle = async (item: HistoryItem) => {
     try {
-      await deleteDoc(doc(db, item.collectionName, item.id));
+      deleteHistoryRecord(item.collectionName, item.id);
       setRecords((prev) => prev.filter((r) => !(r.id === item.id && r.collectionName === item.collectionName)));
     } catch (err) {
       console.error("Deletion error:", err);
@@ -139,8 +112,7 @@ export default function HistoryDashboard() {
   };
 
   const handleDeleteAll = async () => {
-    const user = auth.currentUser;
-    if (!user || records.length === 0) return;
+    if (records.length === 0) return;
 
     let confirmed = false;
     try {
@@ -156,18 +128,7 @@ export default function HistoryDashboard() {
 
     setLoading(true);
     try {
-      const batch = writeBatch(db);
-      
-      // Fetch and delete all user records sequentially or using batch
-      for (const colName of collectionsList) {
-        const q = query(collection(db, colName), where("userId", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        querySnapshot.docs.forEach((docSnap) => {
-          batch.delete(docSnap.ref);
-        });
-      }
-
-      await batch.commit();
+      clearHistoryRecords();
       setRecords([]);
     } catch (err) {
       console.error("Failed to clear database logs:", err);

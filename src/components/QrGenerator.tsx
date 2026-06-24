@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "motion/react";
 import QRCode from "qrcode";
-import { db, auth, collection, addDoc, serverTimestamp } from "../lib/firebase";
+import { addHistoryRecord } from "../lib/localHistory";
 import { 
   QrCode, 
   Download, 
@@ -16,13 +15,9 @@ import {
   Copy
 } from "lucide-react";
 
-interface QrGeneratorProps {
-  onShowAuthModal: (toolName: string) => void;
-}
-
 type QrInputType = "text" | "url" | "email" | "phone";
 
-export default function QrGenerator({ onShowAuthModal }: QrGeneratorProps) {
+export default function QrGenerator() {
   const [inputType, setInputType] = useState<QrInputType>("url");
   const [inputValue, setInputValue] = useState("");
   
@@ -152,19 +147,11 @@ export default function QrGenerator({ onShowAuthModal }: QrGeneratorProps) {
   };
 
   const handleSaveToHistory = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      onShowAuthModal("QR Code Generator");
-      return;
-    }
-
     setLoading(true);
     setSaved(false);
     try {
-      await addDoc(collection(db, "qr_history"), {
-        userId: user.uid,
+      addHistoryRecord("qr_history", {
         toolName: "QR Code Generator",
-        timestamp: serverTimestamp(),
         type: inputType,
         inputData: payload,
       });

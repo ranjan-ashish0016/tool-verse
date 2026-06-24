@@ -1,20 +1,12 @@
 import { useState } from "react";
-import { motion } from "motion/react";
-import { db, auth, collection, addDoc, serverTimestamp } from "../lib/firebase";
+import { addHistoryRecord } from "../lib/localHistory";
 import { 
-  Calculator, 
   Save, 
   Check, 
-  CalendarRange,
-  TrendingUp,
-  Percent
+  TrendingUp
 } from "lucide-react";
 
-interface EmiCalculatorProps {
-  onShowAuthModal: (toolName: string) => void;
-}
-
-export default function EmiCalculator({ onShowAuthModal }: EmiCalculatorProps) {
+export default function EmiCalculator() {
   const [loanAmount, setLoanAmount] = useState<string>("500000");
   const [interestRate, setInterestRate] = useState<string>("8.5");
   const [tenureYears, setTenureYears] = useState<string>("5");
@@ -52,19 +44,11 @@ export default function EmiCalculator({ onShowAuthModal }: EmiCalculatorProps) {
   };
 
   const handleSaveToHistory = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      onShowAuthModal("EMI Calculator");
-      return;
-    }
-
     setSavingLoading(true);
     setSaved(false);
     try {
-      await addDoc(collection(db, "emi_history"), {
-        userId: user.uid,
+      addHistoryRecord("emi_history", {
         toolName: "EMI Calculator",
-        timestamp: serverTimestamp(),
         loanAmount: principal,
         interestRate: annualRate,
         loanTenure: numMonths, // Saved in months normalized

@@ -1,22 +1,14 @@
 import { useState } from "react";
-import { motion } from "motion/react";
-import { db, auth, collection, addDoc, serverTimestamp } from "../lib/firebase";
+import { addHistoryRecord } from "../lib/localHistory";
 import { 
   Calculator, 
   Copy, 
   Download, 
   Save, 
   Check, 
-  Percent, 
-  ArrowRightLeft,
-  CircleAlert
 } from "lucide-react";
 
-interface GstCalculatorProps {
-  onShowAuthModal: (toolName: string) => void;
-}
-
-export default function GstCalculator({ onShowAuthModal }: GstCalculatorProps) {
+export default function GstCalculator() {
   const [amount, setAmount] = useState<string>("1000");
   const [gstRate, setGstRate] = useState<number>(18);
   const [calcType, setCalcType] = useState<"add" | "remove">("add");
@@ -91,19 +83,11 @@ export default function GstCalculator({ onShowAuthModal }: GstCalculatorProps) {
   };
 
   const handleSaveToHistory = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      onShowAuthModal("GST Calculator");
-      return;
-    }
-
     setSavingLoading(true);
     setSaved(false);
     try {
-      await addDoc(collection(db, "gst_history"), {
-        userId: user.uid,
+      addHistoryRecord("gst_history", {
         toolName: "GST Calculator",
-        timestamp: serverTimestamp(),
         amount: amt,
         gstRate: gstRate,
         gstAmount: parseFloat(gstAmount.toFixed(2)),

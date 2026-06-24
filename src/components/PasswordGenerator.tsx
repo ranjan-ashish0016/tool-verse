@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "motion/react";
-import { db, auth, collection, addDoc, serverTimestamp } from "../lib/firebase";
+import { addHistoryRecord } from "../lib/localHistory";
 import { 
   ShieldCheck, 
   Copy, 
@@ -12,11 +11,7 @@ import {
   EyeOff
 } from "lucide-react";
 
-interface PasswordGeneratorProps {
-  onShowAuthModal: (toolName: string) => void;
-}
-
-export default function PasswordGenerator({ onShowAuthModal }: PasswordGeneratorProps) {
+export default function PasswordGenerator() {
   const [length, setLength] = useState<number>(14);
   const [uppercase, setUppercase] = useState(true);
   const [lowercase, setLowercase] = useState(true);
@@ -88,21 +83,13 @@ export default function PasswordGenerator({ onShowAuthModal }: PasswordGenerator
   const strength = getStrengthAndColor();
 
   const handleSaveToHistory = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      onShowAuthModal("Password Generator");
-      return;
-    }
-
     if (!password || password.startsWith("Please")) return;
 
     setSavingLoading(true);
     setSaved(false);
     try {
-      await addDoc(collection(db, "password_history"), {
-        userId: user.uid,
+      addHistoryRecord("password_history", {
         toolName: "Password Generator",
-        timestamp: serverTimestamp(),
         length: length,
         strength: strength.label as any,
         generatedPassword: password,

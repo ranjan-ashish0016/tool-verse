@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { motion } from "motion/react";
-import { db, auth, collection, addDoc, serverTimestamp } from "../lib/firebase";
+import { addHistoryRecord } from "../lib/localHistory";
 import { 
   CalendarRange, 
   Hourglass, 
@@ -9,11 +8,7 @@ import {
   Cake 
 } from "lucide-react";
 
-interface AgeCalculatorProps {
-  onShowAuthModal: (toolName: string) => void;
-}
-
-export default function AgeCalculator({ onShowAuthModal }: AgeCalculatorProps) {
+export default function AgeCalculator() {
   const [dob, setDob] = useState<string>("2000-01-01");
   const [saved, setSaved] = useState(false);
   const [savingLoading, setSavingLoading] = useState(false);
@@ -70,21 +65,13 @@ export default function AgeCalculator({ onShowAuthModal }: AgeCalculatorProps) {
   const results = computeAgeDetails();
 
   const handleSaveToHistory = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      onShowAuthModal("Age Calculator");
-      return;
-    }
-
     if (!results) return;
 
     setSavingLoading(true);
     setSaved(false);
     try {
-      await addDoc(collection(db, "age_history"), {
-        userId: user.uid,
+      addHistoryRecord("age_history", {
         toolName: "Age Calculator",
-        timestamp: serverTimestamp(),
         dob: dob,
         years: results.years,
         months: results.months,
