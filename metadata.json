@@ -1,0 +1,6 @@
+{
+  "name": "ToolVerse",
+  "description": "All-in-One Smart Tools Platform featuring high-performance calculators, utilities, secure password checkers, and QR builders.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

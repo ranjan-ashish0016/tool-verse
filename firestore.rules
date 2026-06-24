@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Shared general helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'fullName', 'email', 'createdAt'])
+             && data.keys().size() == 4
+             && data.uid == request.auth.uid
+             && data.uid is string && data.uid.size() <= 128
+             && data.fullName is string && data.fullName.size() <= 200
+             && data.email is string && data.email.size() <= 200;
+    }
+
+    match /users/{userId} {
+      allow read, create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if false; // Profiles are permanent database objects
+    }
+
+    match /gst_history/{docId} {
+      allow read, delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid;
+    }
+
+    match /emi_history/{docId} {
+      allow read, delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid;
+    }
+
+    match /age_history/{docId} {
+      allow read, delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid;
+    }
+
+    match /qr_history/{docId} {
+      allow read, delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid;
+    }
+
+    match /password_history/{docId} {
+      allow read, delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid;
+    }
+  }
+}
